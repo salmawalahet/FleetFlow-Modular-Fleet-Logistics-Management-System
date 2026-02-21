@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FleetFlow — Driver Performance & Safety</title>
+    <meta name="description"
+        content="FleetFlow Drivers — manage driver profiles, license compliance, safety scores, and duty status." />
+    <link rel="stylesheet" href="styles/main.css" />
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🚛</div>
+                <div class="logo-text">Fleet<span>Flow</span></div>
+            </div>
+            <nav class="nav-section" id="sidebar-nav"></nav>
+            <div class="sidebar-user">
+                <div class="user-avatar" id="sidebar-user-avatar">M</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebar-user-name">Manager</div>
+                    <div class="user-role" id="sidebar-user-role">manager</div>
+                </div>
+                <button class="logout-btn" onclick="Auth.logout()" title="Logout">↩</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Driver Performance & Safety</div>
+                    <div class="page-subtitle">HR compliance, license tracking, and safety scores</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="Modal.open('modal-new-driver')">+ Register Driver</button>
+                    <button class="btn btn-ghost" onclick="exportDrivers()">📥 Export CSV</button>
+                </div>
+            </div>
+
+            <div class="page-body animate-fade-in">
+                <!-- KPIs -->
+                <div class="kpi-grid" id="driver-kpi"></div>
+
+                <!-- Filters + View toggle -->
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+                    <div class="search-wrap" style="flex:1;min-width:200px;">
+                        <span class="search-icon">🔍</span>
+                        <input class="search-input" id="d-search" placeholder="Search by name, license…"
+                            oninput="renderDrivers()" />
+                    </div>
+                    <select class="filter-select" id="d-status" onchange="renderDrivers()">
+                        <option value="all">All Statuses</option>
+                        <option>On Duty</option>
+                        <option>Off Duty</option>
+                        <option>Suspended</option>
+                    </select>
+                    <select class="filter-select" id="d-cat" onchange="renderDrivers()">
+                        <option value="all">All Categories</option>
+                        <option>Truck</option>
+                        <option>Van</option>
+                        <option>Bike</option>
+                    </select>
+                    <select class="filter-select" id="d-view" onchange="renderDrivers()">
+                        <option value="cards">Card View</option>
+                        <option value="table">Table View</option>
+                    </select>
+                </div>
+
+                <!-- Cards View -->
+                <div class="cards-grid" id="driver-cards-view"></div>
+                <!-- Table View -->
+                <div class="table-card" id="driver-table-view" style="display:none;">
+                    <table class="data-table" id="d-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>License</th>
+                                <th>Category</th>
+                                <th>License Expiry</th>
+                                <th>Safety Score</th>
+                                <th>Trips Done</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="d-body"></tbody>
+                    </table>
+                    <div id="d-table-empty" class="table-empty" style="display:none;">
+                        <div class="empty-icon">👤</div>
+                        <p>No drivers found.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Driver Modal -->
+    <div class="modal-overlay" id="modal-new-driver">
+        <div class="modal" style="max-width:580px;">
+            <div class="modal-header">
+                <div class="modal-title">👤 Register New Driver</div>
+                <button class="modal-close" onclick="Modal.close('modal-new-driver')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Full Name *</label>
+                        <input class="form-control" id="nd-name" placeholder="e.g. Alex Rodrigues" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input class="form-control" id="nd-phone" placeholder="e.g. 9876543210" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">License Number *</label>
+                        <input class="form-control" id="nd-license" placeholder="e.g. MH-DL-20191023" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">License Expiry *</label>
+                        <input class="form-control" id="nd-expiry" type="date" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Vehicle Category *</label>
+                        <select class="form-control" id="nd-cat">
+                            <option value="">Select category</option>
+                            <option>Truck</option>
+                            <option>Van</option>
+                            <option>Bike</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Join Date</label>
+                        <input class="form-control" id="nd-join" type="date" />
+                    </div>
+                </div>
+                <div id="nd-error" class="form-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="Modal.close('modal-new-driver')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveNewDriver()">Register Driver</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Driver Modal -->
+    <div class="modal-overlay" id="modal-edit-driver">
+        <div class="modal" style="max-width:580px;">
+            <div class="modal-header">
+                <div class="modal-title">✏️ Edit Driver</div>
+                <button class="modal-close" onclick="Modal.close('modal-edit-driver')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="ed-id" />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input class="form-control" id="ed-name" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input class="form-control" id="ed-phone" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">License Number</label>
+                        <input class="form-control" id="ed-license" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">License Expiry</label>
+                        <input class="form-control" id="ed-expiry" type="date" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Vehicle Category</label>
+                        <select class="form-control" id="ed-cat">
+                            <option>Truck</option>
+                            <option>Van</option>
+                            <option>Bike</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Safety Score (0–100)</label>
+                        <input class="form-control" id="ed-score" type="number" min="0" max="100" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="Modal.close('modal-edit-driver')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEditDriver()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/drivers.js"></script>
+    <script>
+        DB.init();
+        if (!Auth.requireAuth('drivers')) throw new Error('Blocked');
+        buildSidebar('drivers');
+    </script>
+</body>
+
+</html>

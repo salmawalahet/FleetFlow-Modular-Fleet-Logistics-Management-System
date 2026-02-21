@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FleetFlow — Expense & Fuel Logging</title>
+    <meta name="description"
+        content="FleetFlow Expenses — log fuel and trip costs per vehicle, track total operational expenditure." />
+    <link rel="stylesheet" href="styles/main.css" />
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🚛</div>
+                <div class="logo-text">Fleet<span>Flow</span></div>
+            </div>
+            <nav class="nav-section" id="sidebar-nav"></nav>
+            <div class="sidebar-user">
+                <div class="user-avatar" id="sidebar-user-avatar">M</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebar-user-name">Manager</div>
+                    <div class="user-role" id="sidebar-user-role">manager</div>
+                </div>
+                <button class="logout-btn" onclick="Auth.logout()" title="Logout">↩</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Expense & Fuel Logging</div>
+                    <div class="page-subtitle">Financial tracking per trip and vehicle asset</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="openExpenseModal()">+ Add Expense</button>
+                    <button class="btn btn-ghost" onclick="exportExpenses()">📥 Export CSV</button>
+                </div>
+            </div>
+
+            <div class="page-body animate-fade-in">
+                <!-- KPIs -->
+                <div class="kpi-grid" id="exp-kpi"></div>
+
+                <!-- Two columns: table + per-vehicle cost -->
+                <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;" class="exp-grid">
+                    <div>
+                        <div class="table-card">
+                            <div class="table-toolbar">
+                                <div class="search-wrap">
+                                    <span class="search-icon">🔍</span>
+                                    <input class="search-input" id="e-search"
+                                        placeholder="Search by trip, driver, vehicle…" oninput="renderExpenses()" />
+                                </div>
+                                <select class="filter-select" id="e-vehicle" onchange="renderExpenses()">
+                                    <option value="all">All Vehicles</option>
+                                </select>
+                            </div>
+                            <table class="data-table" id="e-table">
+                                <thead>
+                                    <tr>
+                                        <th>Exp ID</th>
+                                        <th>Trip ID</th>
+                                        <th>Vehicle</th>
+                                        <th>Driver</th>
+                                        <th>Distance</th>
+                                        <th>Fuel (L)</th>
+                                        <th>Fuel Cost</th>
+                                        <th>Misc Cost</th>
+                                        <th>Total</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="e-body"></tbody>
+                            </table>
+                            <div id="e-table-empty" class="table-empty" style="display:none;">
+                                <div class="empty-icon">⛽</div>
+                                <p>No expense logs yet.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Per-Vehicle Cost Summary -->
+                    <div class="card">
+                        <div class="section-title mb-16">💰 Total Operational Cost by Vehicle</div>
+                        <div id="vehicle-cost-summary"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Expense Modal -->
+    <div class="modal-overlay" id="modal-new-expense">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">⛽ Add Expense / Fuel Log</div>
+                <button class="modal-close" onclick="Modal.close('modal-new-expense')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Trip ID</label>
+                        <select class="form-control" id="ne-trip" onchange="autofillFromTrip()">
+                            <option value="">— Optional —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Vehicle *</label>
+                        <select class="form-control" id="ne-vehicle">
+                            <option value="">— Select vehicle —</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Driver</label>
+                        <select class="form-control" id="ne-driver">
+                            <option value="">— Select driver —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date *</label>
+                        <input class="form-control" id="ne-date" type="date" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Fuel (Liters)</label>
+                        <input class="form-control" id="ne-liters" type="number" placeholder="e.g. 80" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fuel Cost (₹)</label>
+                        <input class="form-control" id="ne-fuel" type="number" placeholder="e.g. 2200" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Misc Expense (₹)</label>
+                        <input class="form-control" id="ne-misc" type="number" placeholder="e.g. 500 (tolls, etc.)" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <input class="form-control" id="ne-notes" placeholder="e.g. Toll charges" />
+                    </div>
+                </div>
+                <div id="ne-error" class="form-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="Modal.close('modal-new-expense')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveExpense()">Record Expense</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/expenses.js"></script>
+    <script>
+        DB.init();
+        if (!Auth.requireAuth('expenses')) throw new Error('Blocked');
+        buildSidebar('expenses');
+    </script>
+    <style>
+        @media(max-width:900px) {
+            .exp-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+</body>
+
+</html>

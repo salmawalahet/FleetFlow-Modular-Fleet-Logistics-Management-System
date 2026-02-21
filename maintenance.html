@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FleetFlow — Maintenance & Service Logs</title>
+    <meta name="description"
+        content="FleetFlow Maintenance — log vehicle repairs, track service costs, and auto-manage shop status." />
+    <link rel="stylesheet" href="styles/main.css" />
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🚛</div>
+                <div class="logo-text">Fleet<span>Flow</span></div>
+            </div>
+            <nav class="nav-section" id="sidebar-nav"></nav>
+            <div class="sidebar-user">
+                <div class="user-avatar" id="sidebar-user-avatar">M</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebar-user-name">Manager</div>
+                    <div class="user-role" id="sidebar-user-role">manager</div>
+                </div>
+                <button class="logout-btn" onclick="Auth.logout()" title="Logout">↩</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Maintenance & Service Logs</div>
+                    <div class="page-subtitle">Preventative and reactive vehicle health tracking</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-amber" onclick="openNewServiceModal()">+ Create New Service</button>
+                </div>
+            </div>
+
+            <div class="page-body animate-fade-in">
+                <!-- Alert Banner -->
+                <div id="shop-banner"
+                    style="display:none;background:var(--accent-red-dim);border:1px solid var(--accent-red);border-radius:var(--radius-md);padding:12px 20px;margin-bottom:20px;font-size:13px;color:var(--accent-red);">
+                    🔧 <strong id="shop-banner-text"></strong> — These vehicles are hidden from the Trip Dispatcher.
+                </div>
+
+                <!-- KPIs -->
+                <div class="kpi-grid" id="maint-kpi"></div>
+
+                <div class="table-card">
+                    <div class="table-toolbar">
+                        <div class="search-wrap">
+                            <span class="search-icon">🔍</span>
+                            <input class="search-input" id="m-search" placeholder="Search by vehicle, issue…"
+                                oninput="renderMaintenance()" />
+                        </div>
+                        <select class="filter-select" id="m-status" onchange="renderMaintenance()">
+                            <option value="all">All Statuses</option>
+                            <option>In Progress</option>
+                            <option>Completed</option>
+                        </select>
+                        <select class="filter-select" id="m-vehicle" onchange="renderMaintenance()">
+                            <option value="all">All Vehicles</option>
+                        </select>
+                    </div>
+                    <table class="data-table" id="m-table">
+                        <thead>
+                            <tr>
+                                <th>Log ID</th>
+                                <th>Vehicle</th>
+                                <th>Issue / Service</th>
+                                <th>Date</th>
+                                <th>Cost</th>
+                                <th>Notes</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="m-body"></tbody>
+                    </table>
+                    <div id="m-table-empty" class="table-empty" style="display:none;">
+                        <div class="empty-icon">🔧</div>
+                        <p>No maintenance logs yet. Add your first service entry!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Service Modal -->
+    <div class="modal-overlay" id="modal-new-service">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">🔧 Log New Service</div>
+                <button class="modal-close" onclick="Modal.close('modal-new-service')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Vehicle Name / Plate *</label>
+                    <select class="form-control" id="ns-vehicle">
+                        <option value="">— Select vehicle —</option>
+                    </select>
+                    <div style="font-size:11px;color:var(--accent-amber);margin-top:4px;">⚠️ Adding this log will
+                        automatically set vehicle status to "In Shop" and hide it from the Dispatcher.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Issue / Service *</label>
+                    <input class="form-control" id="ns-issue"
+                        placeholder="e.g. Oil Change, Engine Issue, Tyre Replacement" />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Date *</label>
+                        <input class="form-control" id="ns-date" type="date" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cost (₹)</label>
+                        <input class="form-control" id="ns-cost" type="number" placeholder="e.g. 2500" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" id="ns-notes" rows="3" placeholder="Additional details…"
+                        style="resize:vertical;"></textarea>
+                </div>
+                <div id="ns-error" class="form-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="Modal.close('modal-new-service')">Cancel</button>
+                <button class="btn btn-amber" onclick="saveNewService()">Create Log</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/maintenance.js"></script>
+    <script>
+        DB.init();
+        if (!Auth.requireAuth('maintenance')) throw new Error('Blocked');
+        buildSidebar('maintenance');
+    </script>
+</body>
+
+</html>

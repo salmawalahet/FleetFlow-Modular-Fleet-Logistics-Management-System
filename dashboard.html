@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FleetFlow — Command Center</title>
+    <meta name="description"
+        content="FleetFlow Command Center — live fleet KPIs, recent trips, active alerts, and operational overview." />
+    <link rel="stylesheet" href="styles/main.css" />
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🚛</div>
+                <div class="logo-text">Fleet<span>Flow</span></div>
+            </div>
+            <nav class="nav-section" id="sidebar-nav"></nav>
+            <div class="sidebar-user">
+                <div class="user-avatar" id="sidebar-user-avatar">M</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebar-user-name">Manager</div>
+                    <div class="user-role" id="sidebar-user-role">manager</div>
+                </div>
+                <button class="logout-btn" onclick="Auth.logout()" title="Logout">↩</button>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <div class="main-content">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Command Center</div>
+                    <div class="page-subtitle">Live fleet overview — <span id="dash-date"></span></div>
+                </div>
+                <div class="header-actions">
+                    <a href="trips.html"><button class="btn btn-primary">+ New Trip</button></a>
+                    <a href="vehicles.html"><button class="btn btn-ghost">+ Add Vehicle</button></a>
+                </div>
+            </div>
+
+            <div class="page-body animate-fade-in">
+                <!-- KPI Cards -->
+                <div class="kpi-grid" id="kpi-grid"></div>
+
+                <!-- Filters row -->
+                <div class="table-toolbar"
+                    style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);margin-bottom:20px;">
+                    <div class="search-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input class="search-input" id="dash-search" placeholder="Search trips…"
+                            oninput="filterDashTable()" />
+                    </div>
+                    <select class="filter-select" id="dash-type" onchange="filterDashTable()">
+                        <option value="all">All Types</option>
+                        <option>Truck</option>
+                        <option>Van</option>
+                        <option>Bike</option>
+                    </select>
+                    <select class="filter-select" id="dash-status" onchange="filterDashTable()">
+                        <option value="all">All Statuses</option>
+                        <option>Dispatched</option>
+                        <option>Completed</option>
+                        <option>Cancelled</option>
+                    </select>
+                    <select class="filter-select" id="dash-region" onchange="filterDashTable()">
+                        <option value="all">All Regions</option>
+                        <option>Mumbai</option>
+                        <option>Pune</option>
+                        <option>Delhi</option>
+                        <option>Bangalore</option>
+                        <option>Ahmedabad</option>
+                    </select>
+                </div>
+
+                <!-- Two columns: Recent Trips + Alerts -->
+                <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;" class="dash-grid">
+                    <!-- Recent Trips Table -->
+                    <div class="table-card">
+                        <div style="padding:16px 20px;border-bottom:1px solid var(--border-color);">
+                            <div class="section-title">Recent Trips</div>
+                            <div class="section-subtitle">Active and recent dispatch records</div>
+                        </div>
+                        <table class="data-table" id="dash-trips-table">
+                            <thead>
+                                <tr>
+                                    <th>Trip ID</th>
+                                    <th>Vehicle</th>
+                                    <th>Driver</th>
+                                    <th>Origin → Dest</th>
+                                    <th>Cargo</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-trips-body"></tbody>
+                        </table>
+                        <div id="dash-trips-table-empty" class="table-empty" style="display:none;">
+                            <div class="empty-icon">🗺️</div>
+                            <p>No trips found</p>
+                        </div>
+                    </div>
+
+                    <!-- Side Panel -->
+                    <div style="display:flex;flex-direction:column;gap:16px;">
+                        <!-- Alerts -->
+                        <div class="card">
+                            <div class="section-title mb-16">🚨 Active Alerts</div>
+                            <div id="alerts-list"></div>
+                        </div>
+                        <!-- Fleet Status Breakdown -->
+                        <div class="card">
+                            <div class="section-title mb-16">🚛 Fleet Breakdown</div>
+                            <div id="fleet-breakdown"></div>
+                        </div>
+                        <!-- Quick Actions -->
+                        <div class="card">
+                            <div class="section-title mb-16">⚡ Quick Actions</div>
+                            <div style="display:flex;flex-direction:column;gap:8px;">
+                                <a href="trips.html"><button class="btn btn-primary w-full">+ Create Trip</button></a>
+                                <a href="vehicles.html"><button class="btn btn-ghost w-full">+ Add Vehicle</button></a>
+                                <a href="drivers.html"><button class="btn btn-ghost w-full">+ Register
+                                        Driver</button></a>
+                                <a href="maintenance.html"><button class="btn btn-amber w-full">Log
+                                        Maintenance</button></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        DB.init();
+        if (!Auth.requireAuth('dashboard')) throw new Error('Blocked');
+        buildSidebar('dashboard');
+        document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+
+        function renderDashboard() {
+            const kpis = DB.getDashboardKPIs();
+            // KPI Cards
+            document.getElementById('kpi-grid').innerHTML = `
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-header"><span class="kpi-label">Active Fleet</span><div class="kpi-icon">🚛</div></div>
+        <div class="kpi-value">${kpis.activeFleet}</div>
+        <div class="kpi-sub">${kpis.dispatchedTrips} trips currently dispatched</div>
+      </div>
+      <div class="kpi-card kpi-red">
+        <div class="kpi-header"><span class="kpi-label">Maintenance Alerts</span><div class="kpi-icon">🔧</div></div>
+        <div class="kpi-value">${kpis.maintenanceAlerts}</div>
+        <div class="kpi-sub">Vehicles currently In Shop</div>
+      </div>
+      <div class="kpi-card kpi-amber">
+        <div class="kpi-header"><span class="kpi-label">Utilization Rate</span><div class="kpi-icon">📊</div></div>
+        <div class="kpi-value">${kpis.utilizationRate}%</div>
+        <div class="kpi-sub">${kpis.activeFleet} of ${kpis.total} vehicles on trip</div>
+      </div>
+      <div class="kpi-card kpi-purple">
+        <div class="kpi-header"><span class="kpi-label">Pending Cargo</span><div class="kpi-icon">📦</div></div>
+        <div class="kpi-value">${kpis.pendingCargo}</div>
+        <div class="kpi-sub">Shipments awaiting assignment</div>
+      </div>
+      <div class="kpi-card kpi-green">
+        <div class="kpi-header"><span class="kpi-label">Available Vehicles</span><div class="kpi-icon">✅</div></div>
+        <div class="kpi-value">${kpis.available}</div>
+        <div class="kpi-sub">Ready for dispatch</div>
+      </div>
+    `;
+
+            // Recent Trips
+            const trips = DB.getAll('trips').slice().reverse();
+            const vehicles = DB.getAll('vehicles');
+            const drivers = DB.getAll('drivers');
+            const body = document.getElementById('dash-trips-body');
+            if (trips.length === 0) {
+                body.innerHTML = '';
+                document.getElementById('dash-trips-table-empty').style.display = 'block';
+                return;
+            }
+            body.innerHTML = trips.map(t => {
+                const v = vehicles.find(v => v.id === t.vehicleId) || {};
+                const d = drivers.find(d => d.id === t.driverId) || {};
+                return `<tr data-searchable="${t.id} ${v.model || ''} ${d.name || ''} ${t.origin || ''} ${t.destination || ''} ${t.status}" data-type="${v.type || ''}" data-status="${t.status}" data-region="${t.origin || ''}">
+        <td><span class="text-blue fw-600">#${t.id.toUpperCase()}</span></td>
+        <td><div class="td-main">${v.plate || '—'}</div><div class="td-sub">${v.model || '—'}</div></td>
+        <td>${d.name || '—'}</td>
+        <td>${t.origin || '—'} → ${t.destination || '—'}</td>
+        <td>${t.cargoWeight || 0} kg</td>
+        <td>${makePill(t.status)}</td>
+      </tr>`;
+            }).join('');
+
+            // Alerts
+            const expired = DB.getAll('drivers').filter(d => daysUntilExpiry(d.licenseExpiry) < 0);
+            const expiringSoon = DB.getAll('drivers').filter(d => { const days = daysUntilExpiry(d.licenseExpiry); return days >= 0 && days < 30; });
+            const inShop = DB.getAll('vehicles').filter(v => v.status === 'In Shop');
+            const alerts = [
+                ...inShop.map(v => ({ icon: '🔧', msg: `${v.plate} (${v.model}) is In Shop`, cls: 'text-red' })),
+                ...expired.map(d => ({ icon: '🚫', msg: `${d.name}'s license EXPIRED`, cls: 'text-red' })),
+                ...expiringSoon.map(d => ({ icon: '⚠️', msg: `${d.name}'s license expires in ${daysUntilExpiry(d.licenseExpiry)}d`, cls: 'text-amber' })),
+            ];
+            const alertsEl = document.getElementById('alerts-list');
+            alertsEl.innerHTML = alerts.length === 0
+                ? '<p class="text-muted" style="font-size:13px;">All systems operational ✅</p>'
+                : alerts.map(a => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-color);">
+          <span>${a.icon}</span>
+          <span class="${a.cls}" style="font-size:13px;">${a.msg}</span>
+        </div>`).join('');
+
+            // Fleet breakdown
+            const allV = DB.getAll('vehicles');
+            const breakdown = [
+                { label: 'Available', count: allV.filter(v => v.status === 'Available').length, cls: 'text-green' },
+                { label: 'On Trip', count: allV.filter(v => v.status === 'On Trip').length, cls: 'text-blue' },
+                { label: 'In Shop', count: allV.filter(v => v.status === 'In Shop').length, cls: 'text-red' },
+                { label: 'Retired', count: allV.filter(v => v.status === 'Retired').length, cls: 'text-muted' },
+            ];
+            document.getElementById('fleet-breakdown').innerHTML = breakdown.map(b =>
+                `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">
+        <span style="font-size:13px;">${b.label}</span>
+        <span class="${b.cls} fw-700">${b.count}</span>
+      </div>`
+            ).join('');
+        }
+
+        function filterDashTable() {
+            const search = document.getElementById('dash-search').value;
+            const type = document.getElementById('dash-type').value;
+            const status = document.getElementById('dash-status').value;
+            const region = document.getElementById('dash-region').value;
+            filterTable('dash-trips-table', search, { type, status, region });
+        }
+
+        renderDashboard();
+    </script>
+    <style>
+        @media(max-width:900px) {
+            .dash-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+</body>
+
+</html>

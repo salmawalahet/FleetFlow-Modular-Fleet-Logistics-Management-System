@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FleetFlow — Trip Dispatcher</title>
+    <meta name="description"
+        content="FleetFlow Trip Dispatcher — assign drivers and vehicles, validate cargo weight, and track trip lifecycles." />
+    <link rel="stylesheet" href="styles/main.css" />
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🚛</div>
+                <div class="logo-text">Fleet<span>Flow</span></div>
+            </div>
+            <nav class="nav-section" id="sidebar-nav"></nav>
+            <div class="sidebar-user">
+                <div class="user-avatar" id="sidebar-user-avatar">M</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebar-user-name">Manager</div>
+                    <div class="user-role" id="sidebar-user-role">manager</div>
+                </div>
+                <button class="logout-btn" onclick="Auth.logout()" title="Logout">↩</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Trip Dispatcher & Management</div>
+                    <div class="page-subtitle">Assign vehicle, driver, and cargo with real-time validation</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="Modal.open('modal-new-trip')">+ Create Trip</button>
+                </div>
+            </div>
+
+            <div class="page-body animate-fade-in">
+                <!-- KPIs -->
+                <div class="kpi-grid" id="trip-kpi"></div>
+
+                <div class="table-card">
+                    <div class="table-toolbar">
+                        <div class="search-wrap">
+                            <span class="search-icon">🔍</span>
+                            <input class="search-input" id="t-search" placeholder="Search by trip #, vehicle, driver…"
+                                oninput="renderTrips()" />
+                        </div>
+                        <select class="filter-select" id="t-status" onchange="renderTrips()">
+                            <option value="all">All Statuses</option>
+                            <option>Draft</option>
+                            <option>Dispatched</option>
+                            <option>Completed</option>
+                            <option>Cancelled</option>
+                        </select>
+                    </div>
+                    <table class="data-table" id="t-table">
+                        <thead>
+                            <tr>
+                                <th>Trip ID</th>
+                                <th>Type</th>
+                                <th>Vehicle</th>
+                                <th>Driver</th>
+                                <th>Origin</th>
+                                <th>Destination</th>
+                                <th>Cargo (kg)</th>
+                                <th>Revenue</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="t-body"></tbody>
+                    </table>
+                    <div id="t-table-empty" class="table-empty" style="display:none;">
+                        <div class="empty-icon">🚚</div>
+                        <p>No trips found. Start by dispatching a new vehicle!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Trip Modal -->
+    <div class="modal-overlay" id="modal-new-trip">
+        <div class="modal" style="max-width:600px;">
+            <div class="modal-header">
+                <div class="modal-title">🚚 Dispatch New Trip</div>
+                <button class="modal-close" onclick="Modal.close('modal-new-trip')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Vehicle Name / Plate *</label>
+                        <select class="form-control" id="nt-vehicle" onchange="updateCapacityHint()">
+                            <option value="">— Choose available vehicle —</option>
+                        </select>
+                        <div id="cap-hint" style="font-size:11px;color:var(--text-secondary);margin-top:4px;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cargo Weight (kg) *</label>
+                        <input class="form-control" id="nt-cargo" type="number" placeholder="e.g. 1500"
+                            oninput="checkCargoLimit()" />
+                        <div id="cargo-warning"
+                            style="display:none;font-size:11px;color:var(--accent-amber);margin-top:4px;">⚠️ High Load:
+                            Approaching vehicle capacity.</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Driver *</label>
+                    <select class="form-control" id="nt-driver">
+                        <option value="">— Choose available driver —</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Origin Address *</label>
+                        <input class="form-control" id="nt-origin" placeholder="City, Area" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Destination *</label>
+                        <input class="form-control" id="nt-dest" placeholder="City, Area" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Estimated Distance (km)</label>
+                        <input class="form-control" id="nt-distance" type="number" placeholder="e.g. 450" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Revenue (₹)</label>
+                        <input class="form-control" id="nt-revenue" type="number" placeholder="e.g. 15000" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Est. Fuel Cost (₹)</label>
+                    <input class="form-control" id="nt-fuel" type="number" placeholder="e.g. 4500" />
+                </div>
+                <div id="nt-error" class="form-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="Modal.close('modal-new-trip')">Cancel</button>
+                <button class="btn btn-primary" onclick="createTrip()">Dispatch Trip</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Complete Trip Modal -->
+    <div class="modal-overlay" id="modal-complete-trip">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">✅ Complete Trip</div>
+                <button class="modal-close" onclick="Modal.close('modal-complete-trip')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="complete-trip-id" />
+                <div class="form-group">
+                    <label class="form-label">New Odometer Reading (km) *</label>
+                    <input class="form-control" id="complete-odo" type="number" placeholder="Higher than current odo" />
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Updating this will release the
+                        vehicle and driver back to available status.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="Modal.close('modal-complete-trip')">Cancel</button>
+                <button class="btn btn-success" onclick="doCompleteTrip()">Complete & Release</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/trips.js"></script>
+    <script>
+        DB.init();
+        if (!Auth.requireAuth('trips')) throw new Error('Blocked');
+        buildSidebar('trips');
+    </script>
+</body>
+
+</html>

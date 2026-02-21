@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FleetFlow — Vehicle Registry</title>
+    <meta name="description"
+        content="FleetFlow Vehicle Registry — manage trucks, vans, and bikes with capacity and status tracking." />
+    <link rel="stylesheet" href="styles/main.css" />
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🚛</div>
+                <div class="logo-text">Fleet<span>Flow</span></div>
+            </div>
+            <nav class="nav-section" id="sidebar-nav"></nav>
+            <div class="sidebar-user">
+                <div class="user-avatar" id="sidebar-user-avatar">M</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebar-user-name">Manager</div>
+                    <div class="user-role" id="sidebar-user-role">manager</div>
+                </div>
+                <button class="logout-btn" onclick="Auth.logout()" title="Logout">↩</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Vehicle Registry</div>
+                    <div class="page-subtitle">Manage your physical assets, capacity, and active status</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="Modal.open('modal-new-vehicle')">+ Register
+                        Vehicle</button>
+                </div>
+            </div>
+
+            <div class="page-body animate-fade-in">
+                <!-- KPIs -->
+                <div class="kpi-grid" id="vehicle-kpi"></div>
+
+                <div class="table-card">
+                    <div class="table-toolbar">
+                        <div class="search-wrap">
+                            <span class="search-icon">🔍</span>
+                            <input class="search-input" id="v-search" placeholder="Search by plate, model, region…"
+                                oninput="renderVehicles()" />
+                        </div>
+                        <select class="filter-select" id="v-type" onchange="renderVehicles()">
+                            <option value="all">All Types</option>
+                            <option>Truck</option>
+                            <option>Van</option>
+                            <option>Bike</option>
+                        </select>
+                        <select class="filter-select" id="v-status" onchange="renderVehicles()">
+                            <option value="all">All Statuses</option>
+                            <option>Available</option>
+                            <option>On Trip</option>
+                            <option>In Shop</option>
+                            <option>Retired</option>
+                        </select>
+                        <select class="filter-select" id="v-region" onchange="renderVehicles()">
+                            <option value="all">All Regions</option>
+                            <option>North</option>
+                            <option>South</option>
+                            <option>East</option>
+                            <option>West</option>
+                        </select>
+                    </div>
+                    <table class="data-table" id="v-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Plate</th>
+                                <th>Model</th>
+                                <th>Type</th>
+                                <th>Max Capacity</th>
+                                <th>Odometer</th>
+                                <th>Region</th>
+                                <th>Status</th>
+                                <th>Out of Service</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="v-body"></tbody>
+                    </table>
+                    <div id="v-table-empty" class="table-empty" style="display:none;">
+                        <div class="empty-icon">🚛</div>
+                        <p>No vehicles found. Try adjusting your search or filters.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Vehicle Modal -->
+    <div class="modal-overlay" id="modal-new-vehicle">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">🚚 Register New Vehicle</div>
+                <button class="modal-close" onclick="Modal.close('modal-new-vehicle')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Plate / Registration *</label>
+                        <input class="form-control" id="nv-plate" placeholder="e.g. MH-12-AB-1234" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type *</label>
+                        <select class="form-control" id="nv-type">
+                            <option value="">Select type</option>
+                            <option>Truck</option>
+                            <option>Van</option>
+                            <option>Bike</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Model Name *</label>
+                    <input class="form-control" id="nv-model" placeholder="e.g. Tata 407, Mahindra Bolero" />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Max Load Capacity (kg) *</label>
+                        <input class="form-control" id="nv-capacity" type="number" placeholder="e.g. 2500" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Current Odometer (km)</label>
+                        <input class="form-control" id="nv-odometer" type="number" placeholder="e.g. 12000" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Assigned Region</label>
+                        <select class="form-control" id="nv-region">
+                            <option value="">Select region</option>
+                            <option>North</option>
+                            <option>South</option>
+                            <option>East</option>
+                            <option>West</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Acquisition Cost (₹)</label>
+                        <input class="form-control" id="nv-cost" type="number" placeholder="e.g. 850000" />
+                    </div>
+                </div>
+                <div id="nv-error" class="form-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="Modal.close('modal-new-vehicle')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveNewVehicle()">Register Vehicle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Vehicle Modal -->
+    <div class="modal-overlay" id="modal-edit-vehicle">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">✏️ Edit Vehicle</div>
+                <button class="modal-close" onclick="Modal.close('modal-edit-vehicle')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="ev-id" />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Plate / Registration</label>
+                        <input class="form-control" id="ev-plate" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select class="form-control" id="ev-type">
+                            <option>Truck</option>
+                            <option>Van</option>
+                            <option>Bike</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Model Name</label>
+                    <input class="form-control" id="ev-model" />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Max Capacity (kg)</label>
+                        <input class="form-control" id="ev-capacity" type="number" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Current Odometer (km)</label>
+                        <input class="form-control" id="ev-odometer" type="number" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Assigned Region</label>
+                        <select class="form-control" id="ev-region">
+                            <option>North</option>
+                            <option>South</option>
+                            <option>East</option>
+                            <option>West</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Acquisition Cost (₹)</label>
+                        <input class="form-control" id="ev-cost" type="number" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="Modal.close('modal-edit-vehicle')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEditVehicle()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/vehicles.js"></script>
+    <script>
+        DB.init();
+        if (!Auth.requireAuth('vehicles')) throw new Error('Blocked');
+        buildSidebar('vehicles');
+    </script>
+</body>
+
+</html>

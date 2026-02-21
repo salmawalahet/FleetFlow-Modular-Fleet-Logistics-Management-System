@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FleetFlow — Operational Analytics</title>
+    <meta name="description"
+        content="FleetFlow Analytics — fuel efficiency, vehicle ROI, cost-per-km, and financial reporting with CSV/PDF export." />
+    <link rel="stylesheet" href="styles/main.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+</head>
+
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🚛</div>
+                <div class="logo-text">Fleet<span>Flow</span></div>
+            </div>
+            <nav class="nav-section" id="sidebar-nav"></nav>
+            <div class="sidebar-user">
+                <div class="user-avatar" id="sidebar-user-avatar">M</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebar-user-name">Manager</div>
+                    <div class="user-role" id="sidebar-user-role">manager</div>
+                </div>
+                <button class="logout-btn" onclick="Auth.logout()" title="Logout">↩</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Operational Analytics</div>
+                    <div class="page-subtitle">Data-driven decisions — ROI, fuel efficiency, cost-per-km</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-ghost" onclick="exportCSVReport()">📥 Export CSV</button>
+                    <button class="btn btn-primary" onclick="exportPDF()">📄 Export PDF</button>
+                </div>
+            </div>
+
+            <div class="page-body animate-fade-in">
+                <!-- Summary KPIs -->
+                <div class="kpi-grid" id="an-kpi"></div>
+
+                <!-- Charts Row -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">⛽ Fuel Efficiency by Vehicle</div>
+                        <div class="chart-sub">km / Liter — higher is better</div>
+                        <canvas id="chart-fuel" height="220"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">💰 Operational Cost Breakdown</div>
+                        <div class="chart-sub">Fuel vs. Maintenance by vehicle</div>
+                        <canvas id="chart-cost" height="220"></canvas>
+                    </div>
+                </div>
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">📊 Revenue vs. Cost by Vehicle</div>
+                        <div class="chart-sub">Revenue earned vs. total costs incurred</div>
+                        <canvas id="chart-rev" height="220"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">📋 Trip Status Distribution</div>
+                        <div class="chart-sub">Breakdown of all trip outcomes</div>
+                        <canvas id="chart-trips" height="220"></canvas>
+                    </div>
+                </div>
+
+                <!-- Vehicle ROI Table -->
+                <div class="section-header mt-24 mb-16">
+                    <div>
+                        <div class="section-title">🏦 Vehicle ROI & Financial Summary</div>
+                        <div class="section-subtitle">Return on Investment per asset — (Revenue − Costs) / Acquisition
+                            Cost × 100</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <table class="data-table" id="roi-table">
+                        <thead>
+                            <tr>
+                                <th>Vehicle</th>
+                                <th>Model</th>
+                                <th>Type</th>
+                                <th>Trips</th>
+                                <th>Total Revenue</th>
+                                <th>Fuel Cost</th>
+                                <th>Maint. Cost</th>
+                                <th>Total Cost</th>
+                                <th>Net Profit</th>
+                                <th>Acq. Cost</th>
+                                <th>ROI %</th>
+                                <th>Fuel Eff.</th>
+                                <th>Cost/km</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roi-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Driver Performance Table -->
+                <div class="section-header mt-24 mb-16">
+                    <div>
+                        <div class="section-title">👤 Driver Performance Summary</div>
+                        <div class="section-subtitle">Trip completion rates and safety compliance</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <table class="data-table" id="dperf-table">
+                        <thead>
+                            <tr>
+                                <th>Driver</th>
+                                <th>Category</th>
+                                <th>Trips Completed</th>
+                                <th>Safety Score</th>
+                                <th>License Expiry</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dperf-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/analytics.js"></script>
+    <script>
+        DB.init();
+        if (!Auth.requireAuth('analytics')) throw new Error('Blocked');
+        buildSidebar('analytics');
+    </script>
+</body>
+
+</html>

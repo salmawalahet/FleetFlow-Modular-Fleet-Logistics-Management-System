@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FleetFlow — Login</title>
+    <meta name="description"
+        content="FleetFlow Fleet & Logistics Management System. Secure login portal for fleet managers, dispatchers, safety officers, and analysts." />
+    <link rel="stylesheet" href="styles/main.css" />
+</head>
+
+<body>
+    <div class="login-page">
+        <div class="login-bg"></div>
+        <div class="login-grid"></div>
+
+        <div class="login-card animate-fade-in">
+            <!-- Left Brand Panel -->
+            <div class="login-left">
+                <div class="login-brand">
+                    <div class="brand-icon">🚛</div>
+                    <div class="brand-name">Fleet<span>Flow</span></div>
+                </div>
+                <div class="login-tagline">
+                    Drive Smarter.<br />
+                    Deliver <span>Faster.</span>
+                </div>
+                <p class="login-desc">
+                    A centralized command hub for your fleet's entire lifecycle — from vehicle intake to financial
+                    analytics.
+                </p>
+                <div class="login-features">
+                    <div class="login-feature">
+                        <div class="login-feature-icon">🚛</div>
+                        Real-time vehicle & driver tracking
+                    </div>
+                    <div class="login-feature">
+                        <div class="login-feature-icon">🔧</div>
+                        Automated maintenance status control
+                    </div>
+                    <div class="login-feature">
+                        <div class="login-feature-icon">📊</div>
+                        Financial analytics & ROI reporting
+                    </div>
+                    <div class="login-feature">
+                        <div class="login-feature-icon">🔒</div>
+                        Role-based access control (RBAC)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Login Form -->
+            <div class="login-right">
+                <h2>Welcome back</h2>
+                <p>Sign in to your FleetFlow account</p>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" id="login-email" class="form-control-login" placeholder="email@company.com"
+                        autocomplete="email" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="login-password" class="form-control-login"
+                        placeholder="Enter your password" autocomplete="current-password" />
+                    <div id="login-error" class="form-error"></div>
+                </div>
+                <div class="forgot-link">Forgot Password?</div>
+                <button class="login-btn" id="login-btn" onclick="doLogin()">Sign In →</button>
+
+                <!-- Demo Accounts -->
+                <div class="demo-accounts">
+                    <h4>Demo Accounts</h4>
+                    <div class="demo-item">
+                        <span class="demo-email"
+                            onclick="fillDemo('manager@fleetflow.io','manager123')">manager@fleetflow.io</span>
+                        <span class="demo-pass">manager123</span>
+                    </div>
+                    <div class="demo-item">
+                        <span class="demo-email"
+                            onclick="fillDemo('dispatcher@fleetflow.io','dispatch123')">dispatcher@fleetflow.io</span>
+                        <span class="demo-pass">dispatch123</span>
+                    </div>
+                    <div class="demo-item">
+                        <span class="demo-email"
+                            onclick="fillDemo('analyst@fleetflow.io','analyst123')">analyst@fleetflow.io</span>
+                        <span class="demo-pass">analyst123</span>
+                    </div>
+                    <div class="demo-item">
+                        <span class="demo-email"
+                            onclick="fillDemo('safety@fleetflow.io','safety123')">safety@fleetflow.io</span>
+                        <span class="demo-pass">safety123</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Redirect if already logged in
+        DB.init();
+        if (Auth.isLoggedIn()) window.location.href = 'dashboard.html';
+
+        function fillDemo(email, pass) {
+            document.getElementById('login-email').value = email;
+            document.getElementById('login-password').value = pass;
+        }
+
+        function doLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-btn');
+
+            errEl.classList.remove('show');
+            if (!email || !password) {
+                errEl.textContent = 'Please enter email and password.';
+                errEl.classList.add('show');
+                return;
+            }
+
+            btn.textContent = 'Signing in…';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                const result = Auth.login(email, password);
+                if (result.error) {
+                    errEl.textContent = result.error;
+                    errEl.classList.add('show');
+                    btn.textContent = 'Sign In →';
+                    btn.disabled = false;
+                } else {
+                    Toast.success(`Welcome back, ${result.session.name}!`);
+                    setTimeout(() => window.location.href = 'dashboard.html', 600);
+                }
+            }, 400);
+        }
+
+        // Enter key
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter') doLogin();
+        });
+    </script>
+</body>
+
+</html>
